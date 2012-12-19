@@ -1,0 +1,13 @@
+#总体思路
+
+= Introduction =
+
+由于vim是多模式编辑器。所以，addin里应该提供“陷入”机制，每一个“陷阱”模拟一种模式，直到用户选择关闭addin模拟功能，则跳出所有陷阱。
+
+
+= Details =
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
