@@ -1,0 +1,57 @@
+// msVim.odl : type library source for msVim.dll
+
+// This file will be processed by the Make Type Library (mktyplib) tool to
+// produce the type library (msVim.tlb).
+
+[	uuid(7D8810EB-3280-4D01-BAF2-2204478D9FFD), version(1.0),
+	helpstring ("MSVIM Developer Studio Add-in") ]
+library MsVim
+{
+	importlib("stdole32.tlb");
+	importlib("devshl.dll");
+	importlib("ide\devdbg.pkg");
+	
+
+	//  Dual interface for CCommands
+	//
+	//  All commands that your add-in adds to DevStudio
+	//   must appear in this interface.  You may use the
+	//   ClassView to add methods to this interface, which
+	//   will cause stub implementations of those methods to
+	//   appear in your CCommands class.
+	
+	[	uuid(1E64C0E6-0563-4FDD-BB1F-CBFAAA584D13),
+		oleautomation,
+		dual
+	]
+
+	interface ICommands : IDispatch
+	{
+		// methods
+		[id(1)]
+		HRESULT MsVimCommandMethod();
+	};
+
+	//  Class information for CCommands
+
+	[ uuid(CDD98441-4E15-4618-A095-DB5291E7586B) ]
+	coclass Commands
+	{
+		[default] interface ICommands;
+	};
+
+	[ hidden, uuid(A3EF0883-AE9B-41CA-8495-A21CA6D72C91) ]
+	coclass ApplicationEvents
+	{
+		[default] interface IApplicationEvents;
+	}
+
+	[ hidden, uuid(A4F1F6ED-F5CF-4FF2-8080-004A7E05960F) ]
+	coclass DebuggerEvents
+	{
+		[default] interface IDebuggerEvents;
+	}
+
+	//{{AFX_APPEND_ODL}}
+	//}}AFX_APPEND_ODL}}
+};
