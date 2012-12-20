@@ -7,9 +7,9 @@ Add your content here.
 
 = Details =
 
-The *TextEditor* object has the following properties. These properties affect all text documents open in the editor. For details about text documents, see the TextDocument object.
+The *TextEditor* object has the following properties. These properties affect all text documents open in the editor. For details about text documents, see the TextDocument object.<br>
 -- 这表明TextEditor对象实际上是一个抽象概念，由属性集构成。这个对象的属性影响所有打开的文档。
 
 
-The *TextWindow* object represents a view of a TextDocument object — that is, a view of a file that is open). A TextDocument object can have several TextWindow objects.
+The *TextWindow* object represents a view of a TextDocument object — that is, a view of a file that is open). A TextDocument object can have several TextWindow objects.<br>
 -- 这表明TextWindow对象才是一个真正的物理窗口。这个窗口根据TextEditor的属性来绘制内容。
