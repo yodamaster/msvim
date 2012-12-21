@@ -2,9 +2,9 @@
 
 
 /* File created by MIDL compiler version 5.01.0164 */
-/* at Wed Dec 19 14:48:30 2012
+/* at Thu Dec 20 15:35:45 2012
  */
-/* Compiler settings for C:\work\msVim\msVim.odl:
+/* Compiler settings for C:\work\msvim\trunk\msVim\msVim.odl:
     Os (OptLev=s), W1, Zp8, env=Win32, ms_ext, c_ext
     error checks: allocation ref bounds_check enum stub_data 
 */
