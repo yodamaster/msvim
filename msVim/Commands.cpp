@@ -190,16 +190,118 @@ STDMETHODIMP CCommands::MsVimCommandMethod()
 	if (FAILED(editor_sel->get_CurrentColumn(&pos.y)))
 		return E_FAIL;
 
-	CString csPos;
-	csPos.Format("L:%d C:%d", pos.x, pos.y);
-	/*CComBSTR docPath;
-	if (FAILED(editor_window->get_Caption(&docPath)))
-		return E_FAIL;*/
+	CWnd* pCurrWnd = FindCurrEditorWnd();
+	if (pCurrWnd == NULL)
+		return S_FALSE;
+
+	Caret(pCurrWnd->m_hWnd, 0);
 
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_FALSE));
-	::MessageBox(NULL, csPos, "MsVim", MB_OK | MB_ICONINFORMATION);
+	//::MessageBox(NULL, csPos, "MsVim", MB_OK | MB_ICONINFORMATION);
 	//::MessageBox(NULL, (CString)docPath.m_str, "MsVim", MB_OK | MB_ICONINFORMATION);
 	//::MessageBox(NULL, "MsVim Command invoked.", "MsVim", MB_OK | MB_ICONINFORMATION);
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_TRUE));
 	return S_OK;
+}
+
+void CCommands::DebugStr( LPCSTR lpStr )
+{
+	if (m_pApplication != NULL) {
+		CComBSTR bstrStr(lpStr);
+		m_pApplication->PrintToOutputWindow(bstrStr);
+	}
+}
+
+CWnd* CCommands::FindCurrEditorWnd()
+{
+	CComPtr<ITextWindow> editor_window;
+	if (FAILED(m_pApplication->get_ActiveWindow((IDispatch**)&editor_window)) || editor_window == NULL)
+		return NULL;
+	
+	CComBSTR bstrCaption;
+	if (FAILED(editor_window->get_Caption(&bstrCaption)))
+		return NULL;
+	CString csCurrCaption(bstrCaption.m_str);
+
+	CWnd* pMainFrm = AfxGetMainWnd();
+	if (pMainFrm == NULL)
+		return NULL;
+	
+	HWND hMDIClient = ::FindWindowEx(pMainFrm->m_hWnd, NULL, "MDIClient", NULL);
+	if (hMDIClient == NULL)
+		return NULL;
+	
+	CString csTitle;
+
+	BOOL bFindCurr = FALSE;
+	HWND hChild = ::FindWindowEx(hMDIClient, NULL, NULL, NULL);
+	while (hChild)
+	{
+		csTitle.Empty();
+		
+		int nLen = ::GetWindowTextLength(hChild);
+		::GetWindowText(hChild, csTitle.GetBufferSetLength(nLen), nLen+1);
+		csTitle.ReleaseBuffer();
+		
+		if (csTitle == csCurrCaption) {
+			bFindCurr = TRUE;
+			break;
+		}
+		hChild = ::FindWindowEx(hMDIClient, hChild, NULL, NULL);
+	}
+	
+	if (!bFindCurr)
+		return NULL;
+
+	return pMainFrm->FromHandle(hChild);
+}
+
+void CCommands::Caret( HWND hWnd, int caret )
+{
+	CComPtr<ITextEditor> editor;
+	if (FAILED(m_pApplication->get_TextEditor((IDispatch**)&editor)))
+		return;
+
+	if (caret == 1) {
+		::DestroyCaret();
+		::CreateCaret(hWnd, (HBITMAP)1, 0, 0);
+		ShowCaret(hWnd);
+		return;
+	}
+
+	CWnd* pWnd = FindCurrEditorWnd();
+	if (pWnd != NULL)
+	{
+		CDC* pDC = pWnd->GetDC();
+
+		CSize fontSize = pDC->GetTextExtent("1");
+		::DestroyCaret();
+		::CreateCaret(hWnd, (HBITMAP)caret, fontSize.cx, fontSize.cy);
+		ShowCaret(hWnd);
+
+		pWnd->ReleaseDC(pDC);
+	}
+}
+
+STDMETHODIMP CCommands::HookMDIClient( )
+{
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	HWND hMDIClient = MDIClientWnd();
+	if (hMDIClient == NULL)
+		return E_FAIL;
+
+	m_prevMDIClientWndProc = (WNDPROC)::GetWindowLong(hMDIClient, GWL_WNDPROC);
+
+	return S_OK;
+}
+
+HWND CCommands::MDIClientWnd()
+{
+	CWnd* pMainFrm = AfxGetMainWnd();
+	if (pMainFrm == NULL)
+		return NULL;
+	
+	HWND hMDIClient = ::FindWindowEx(pMainFrm->m_hWnd, NULL, "MDIClient", NULL);
+	return hMDIClient;
 }

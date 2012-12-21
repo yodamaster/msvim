@@ -14,12 +14,20 @@ class CCommands :
 protected:
 	IApplication* m_pApplication;
 
+	WNDPROC m_prevMDIClientWndProc;
+	LRESULT CurrMDIClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 public:
 	CCommands();
 	~CCommands();
 	void SetApplicationObject(IApplication* m_pApplication);
 	IApplication* GetApplicationObject() { return m_pApplication; }
 	void UnadviseFromEvents();
+
+	void DebugStr(LPCSTR lpStr);
+	HWND MDIClientWnd();
+	CWnd* FindCurrEditorWnd();
+	void Caret(HWND hWnd, int caret);
 
 	BEGIN_COM_MAP(CCommands)
 		COM_INTERFACE_ENTRY(IDispatch)
@@ -93,6 +101,7 @@ protected:
 public:
 // ICommands methods
 	STDMETHOD(MsVimCommandMethod)(THIS);
+	STDMETHOD(HookMDIClient)(THIS);
 };
 
 typedef CComObject<CCommands> CCommandsObj;
