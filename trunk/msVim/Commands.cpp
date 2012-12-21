@@ -176,8 +176,17 @@ STDMETHODIMP CCommands::MsVimCommandMethod()
 	//  and VERIFY_OK to see error strings in DEBUG builds of your add-in
 	//  (see stdafx.h)
 
+	CComPtr<ITextWindow> editor_window;
+	if (FAILED(m_pApplication->get_ActiveWindow((IDispatch**)&editor_window)) || editor_window == NULL)
+		return E_FAIL;
+
+	CComBSTR docPath;
+	if (FAILED(editor_window->get_Caption(&docPath)))
+		return E_FAIL;
+
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_FALSE));
-	::MessageBox(NULL, "MsVim Command invoked.", "MsVim", MB_OK | MB_ICONINFORMATION);
+	::MessageBox(NULL, (CString)docPath.m_str, "MsVim", MB_OK | MB_ICONINFORMATION);
+	//::MessageBox(NULL, "MsVim Command invoked.", "MsVim", MB_OK | MB_ICONINFORMATION);
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_TRUE));
 	return S_OK;
 }
