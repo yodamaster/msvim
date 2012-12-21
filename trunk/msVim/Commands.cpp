@@ -180,12 +180,25 @@ STDMETHODIMP CCommands::MsVimCommandMethod()
 	if (FAILED(m_pApplication->get_ActiveWindow((IDispatch**)&editor_window)) || editor_window == NULL)
 		return E_FAIL;
 
-	CComBSTR docPath;
-	if (FAILED(editor_window->get_Caption(&docPath)))
+	CComPtr<ITextSelection> editor_sel;
+	if (FAILED(editor_window->get_Selection((IDispatch**)&editor_sel)) || editor_sel == NULL)
+		return S_FALSE;
+
+	POINT pos;
+	if (FAILED(editor_sel->get_CurrentLine(&pos.x)))
+		return E_FAIL;
+	if (FAILED(editor_sel->get_CurrentColumn(&pos.y)))
 		return E_FAIL;
 
+	CString csPos;
+	csPos.Format("L:%d C:%d", pos.x, pos.y);
+	/*CComBSTR docPath;
+	if (FAILED(editor_window->get_Caption(&docPath)))
+		return E_FAIL;*/
+
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_FALSE));
-	::MessageBox(NULL, (CString)docPath.m_str, "MsVim", MB_OK | MB_ICONINFORMATION);
+	::MessageBox(NULL, csPos, "MsVim", MB_OK | MB_ICONINFORMATION);
+	//::MessageBox(NULL, (CString)docPath.m_str, "MsVim", MB_OK | MB_ICONINFORMATION);
 	//::MessageBox(NULL, "MsVim Command invoked.", "MsVim", MB_OK | MB_ICONINFORMATION);
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_TRUE));
 	return S_OK;
