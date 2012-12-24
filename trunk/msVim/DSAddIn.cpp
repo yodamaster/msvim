@@ -70,6 +70,20 @@ STDMETHODIMP CDSAddIn::OnConnection(IApplication* pApp, VARIANT_BOOL bFirstTime,
 		return S_OK;
 	}
 
+	LPCTSTR szCommand2 = _T("HookMDIClientWindow");
+	CString strCmdString2;
+	strCmdString2.LoadString(IDS_HOOK_MDICLIENT);
+	strCmdString2 = szCommand2 + strCmdString2;
+	CComBSTR bszCmdString2(strCmdString2);
+	CComBSTR bszMethod2(_T("HookMDIClient"));
+	CComBSTR bszCmdName2(szCommand2);
+	VERIFY_OK(pApplication->AddCommand(bszCmdString2, bszMethod2, 1, m_dwCookie, &bRet));
+	if (bRet == VARIANT_FALSE)
+	{
+		*OnConnection = VARIANT_FALSE;
+		return S_OK;
+	}
+
 	// Add toolbar buttons only if this is the first time the add-in
 	//  is being loaded.  Toolbar buttons are automatically remembered
 	//  by Developer Studio from session to session, so we should only
@@ -77,7 +91,9 @@ STDMETHODIMP CDSAddIn::OnConnection(IApplication* pApp, VARIANT_BOOL bFirstTime,
 	if (bFirstTime == VARIANT_TRUE)
 	{
 		VERIFY_OK(pApplication->
-			AddCommandBarButton(dsGlyph, bszCmdName, m_dwCookie));
+			AddCommandBarButton(dsText, bszCmdName, m_dwCookie));
+		VERIFY_OK(pApplication->
+			AddCommandBarButton(dsText, bszCmdName2, m_dwCookie));
 	}
 
 	*OnConnection = VARIANT_TRUE;

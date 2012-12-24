@@ -11,8 +11,24 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	HWND hMDIClient = CCommands::MDIClientWnd();
+	if (hWnd == hMDIClient)
+	{
+		switch (msg)
+		{
+		default:
+			break;
+		}
+	}
+	return CCommands::m_prevMDIClientWndProc(hWnd, msg, wParam, lParam);
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // CCommands
+HWND CCommands::m_hMDIClientWnd = NULL;
+WNDPROC CCommands::m_prevMDIClientWndProc = NULL;
 
 CCommands::CCommands()
 {
@@ -227,7 +243,7 @@ CWnd* CCommands::FindCurrEditorWnd()
 	if (pMainFrm == NULL)
 		return NULL;
 	
-	HWND hMDIClient = ::FindWindowEx(pMainFrm->m_hWnd, NULL, "MDIClient", NULL);
+	HWND hMDIClient = MDIClientWnd();
 	if (hMDIClient == NULL)
 		return NULL;
 	
@@ -292,16 +308,22 @@ STDMETHODIMP CCommands::HookMDIClient( )
 		return E_FAIL;
 
 	m_prevMDIClientWndProc = (WNDPROC)::GetWindowLong(hMDIClient, GWL_WNDPROC);
+	LONG nHookRes = ::SetWindowLong(hMDIClient, GWL_WNDPROC, (LONG)MDIClientHook);
 
 	return S_OK;
 }
 
 HWND CCommands::MDIClientWnd()
 {
-	CWnd* pMainFrm = AfxGetMainWnd();
-	if (pMainFrm == NULL)
-		return NULL;
-	
-	HWND hMDIClient = ::FindWindowEx(pMainFrm->m_hWnd, NULL, "MDIClient", NULL);
-	return hMDIClient;
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	if (m_hMDIClientWnd == NULL) {
+		CWnd* pMainFrm = AfxGetMainWnd();
+		if (pMainFrm == NULL)
+			return NULL;
+		
+		m_hMDIClientWnd = ::FindWindowEx(pMainFrm->m_hWnd, NULL, "MDIClient", NULL);
+		return m_hMDIClientWnd;
+	}
+	return m_hMDIClientWnd;
 }
