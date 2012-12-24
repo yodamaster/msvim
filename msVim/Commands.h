@@ -13,9 +13,7 @@ class CCommands :
 {
 protected:
 	IApplication* m_pApplication;
-
-	WNDPROC m_prevMDIClientWndProc;
-	LRESULT CurrMDIClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	static HWND m_hMDIClientWnd;
 
 public:
 	CCommands();
@@ -25,9 +23,11 @@ public:
 	void UnadviseFromEvents();
 
 	void DebugStr(LPCSTR lpStr);
-	HWND MDIClientWnd();
+	static HWND MDIClientWnd();
 	CWnd* FindCurrEditorWnd();
 	void Caret(HWND hWnd, int caret);
+
+	static WNDPROC m_prevMDIClientWndProc;
 
 	BEGIN_COM_MAP(CCommands)
 		COM_INTERFACE_ENTRY(IDispatch)

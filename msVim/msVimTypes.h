@@ -2,7 +2,7 @@
 
 
 /* File created by MIDL compiler version 5.01.0164 */
-/* at Thu Dec 20 15:35:45 2012
+/* at Mon Dec 24 15:57:17 2012
  */
 /* Compiler settings for C:\work\msvim\trunk\msVim\msVim.odl:
     Os (OptLev=s), W1, Zp8, env=Win32, ms_ext, c_ext
@@ -100,6 +100,8 @@ DEFINE_GUID(IID_ICommands,0x1E64C0E6,0x0563,0x4FDD,0xBB,0x1F,0xCB,0xFA,0xAA,0x58
     public:
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE MsVimCommandMethod( void) = 0;
         
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE HookMDIClient( void) = 0;
+        
     };
     
 #else 	/* C style interface */
@@ -151,6 +153,9 @@ DEFINE_GUID(IID_ICommands,0x1E64C0E6,0x0563,0x4FDD,0xBB,0x1F,0xCB,0xFA,0xAA,0x58
         /* [id] */ HRESULT ( STDMETHODCALLTYPE __RPC_FAR *MsVimCommandMethod )( 
             ICommands __RPC_FAR * This);
         
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE __RPC_FAR *HookMDIClient )( 
+            ICommands __RPC_FAR * This);
+        
         END_INTERFACE
     } ICommandsVtbl;
 
@@ -190,6 +195,9 @@ DEFINE_GUID(IID_ICommands,0x1E64C0E6,0x0563,0x4FDD,0xBB,0x1F,0xCB,0xFA,0xAA,0x58
 #define ICommands_MsVimCommandMethod(This)	\
     (This)->lpVtbl -> MsVimCommandMethod(This)
 
+#define ICommands_HookMDIClient(This)	\
+    (This)->lpVtbl -> HookMDIClient(This)
+
 #endif /* COBJMACROS */
 
 
@@ -202,6 +210,17 @@ DEFINE_GUID(IID_ICommands,0x1E64C0E6,0x0563,0x4FDD,0xBB,0x1F,0xCB,0xFA,0xAA,0x58
 
 
 void __RPC_STUB ICommands_MsVimCommandMethod_Stub(
+    IRpcStubBuffer *This,
+    IRpcChannelBuffer *_pRpcChannelBuffer,
+    PRPC_MESSAGE _pRpcMessage,
+    DWORD *_pdwStubPhase);
+
+
+/* [id] */ HRESULT STDMETHODCALLTYPE ICommands_HookMDIClient_Proxy( 
+    ICommands __RPC_FAR * This);
+
+
+void __RPC_STUB ICommands_HookMDIClient_Stub(
     IRpcStubBuffer *This,
     IRpcChannelBuffer *_pRpcChannelBuffer,
     PRPC_MESSAGE _pRpcMessage,

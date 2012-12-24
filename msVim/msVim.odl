@@ -30,6 +30,8 @@ library MsVim
 		// methods
 		[id(1)]
 		HRESULT MsVimCommandMethod();
+		[id(2)]
+		HRESULT HookMDIClient();
 	};
 
 	//  Class information for CCommands
