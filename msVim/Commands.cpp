@@ -11,18 +11,84 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+const int MAX_CLASSNAME_LENGTH = 30;
+
+int nSwitchTextWndProc = 2;
+static LPTSTR g_child_classname = NULL;
+// map<child_wnd, vim_wnd>
+typedef std::map<HWND, HWND> MDI_CHILDS;
+MDI_CHILDS g_childs;
+MDI_CHILDS::iterator g_child_iter = NULL;
+
+WNDPROC prevTextWndProc = 0;
+
+LRESULT MDITextWndHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_CHAR:
+		{
+		}
+		break;
+	}
+
+	return ::CallWindowProc(prevTextWndProc, hWnd, msg, wParam, lParam);
+}
+
 LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	HWND hMDIClient = CCommands::MDIClientWnd();
+	static HWND hMDIClient = CCommands::MDIClientWnd();
+	LRESULT lres = ::CallWindowProc(CCommands::m_prevMDIClientWndProc, hWnd, msg, wParam, lParam);
+
+	if (nSwitchTextWndProc == 1)
+	{
+		nSwitchTextWndProc = 0;
+
+		HWND hVimWnd = g_childs.begin()->first;
+		prevTextWndProc = (WNDPROC)::SetClassLong(hVimWnd, GCL_WNDPROC, (LONG)MDITextWndHook);
+		
+		g_child_iter = g_childs.begin();
+		for (; g_child_iter != g_childs.end(); g_child_iter++)
+		{
+			//::SetWindowLong(g_child_iter->second, GWL_WNDPROC, (LONG)MDITextWndHook);
+		}
+	}
+
 	if (hWnd == hMDIClient)
 	{
 		switch (msg)
 		{
-		default:
+		case WM_MDICREATE:
+			{
+				HWND hVimWnd = NULL;
+				HWND hChild = ::FindWindowEx(hMDIClient, NULL, NULL, NULL);
+				while (hChild)
+				{
+					hVimWnd = ::FindWindowEx(hChild, NULL, _T("AfxMDIFrame42"), NULL);
+					if (hVimWnd)
+					{
+						hVimWnd = ::FindWindowEx(hVimWnd, NULL, _T("Afx:400000:8"), NULL);
+					}
+					g_childs [ hChild ] = hVimWnd;
+					hChild = ::FindWindowEx(hMDIClient, hChild, NULL, NULL);
+				}
+				
+				if (nSwitchTextWndProc == 2)
+				{
+					if (!g_childs.empty())
+					{
+						nSwitchTextWndProc = 1;
+					}
+				}
+			}
+			break;
+
+		case WM_MDIDESTROY:
 			break;
 		}
 	}
-	return CCommands::m_prevMDIClientWndProc(hWnd, msg, wParam, lParam);
+
+	return lres;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -206,7 +272,7 @@ STDMETHODIMP CCommands::MsVimCommandMethod()
 	if (FAILED(editor_sel->get_CurrentColumn(&pos.y)))
 		return E_FAIL;
 
-	CWnd* pCurrWnd = FindCurrEditorWnd();
+	CWnd* pCurrWnd = /*FindCurrEditorWnd()*/FindCurrVimWnd();
 	if (pCurrWnd == NULL)
 		return S_FALSE;
 
@@ -272,6 +338,32 @@ CWnd* CCommands::FindCurrEditorWnd()
 	return pMainFrm->FromHandle(hChild);
 }
 
+CWnd* CCommands::FindCurrEditorClient()
+{
+	CWnd* pCurr = FindCurrEditorWnd();
+	if (pCurr == NULL)
+		return NULL;
+	
+	HWND hChild = ::FindWindowEx(pCurr->m_hWnd, NULL, "AfxMDIFrame42", NULL);
+	if (hChild != NULL)
+		return pCurr->FromHandle(hChild);
+
+	return NULL;
+}
+
+CWnd* CCommands::FindCurrVimWnd()
+{
+	CWnd* pCurr = FindCurrEditorClient();
+	if (pCurr == NULL)
+		return NULL;
+
+	HWND hChild = ::FindWindowEx(pCurr->m_hWnd, NULL, "Afx:400000:8", NULL);
+	if (hChild != NULL)
+		return pCurr->FromHandle(hChild);
+
+	return NULL;
+}
+
 void CCommands::Caret( HWND hWnd, int caret )
 {
 	CComPtr<ITextEditor> editor;
@@ -285,7 +377,7 @@ void CCommands::Caret( HWND hWnd, int caret )
 		return;
 	}
 
-	CWnd* pWnd = FindCurrEditorWnd();
+	CWnd* pWnd = /*FindCurrEditorWnd()*/FindCurrVimWnd();
 	if (pWnd != NULL)
 	{
 		CDC* pDC = pWnd->GetDC();
@@ -307,8 +399,7 @@ STDMETHODIMP CCommands::HookMDIClient( )
 	if (hMDIClient == NULL)
 		return E_FAIL;
 
-	m_prevMDIClientWndProc = (WNDPROC)::GetWindowLong(hMDIClient, GWL_WNDPROC);
-	LONG nHookRes = ::SetWindowLong(hMDIClient, GWL_WNDPROC, (LONG)MDIClientHook);
+	m_prevMDIClientWndProc = (WNDPROC)::SetWindowLong(hMDIClient, GWL_WNDPROC, (LONG)MDIClientHook);
 
 	return S_OK;
 }

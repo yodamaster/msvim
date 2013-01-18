@@ -25,6 +25,8 @@ public:
 	void DebugStr(LPCSTR lpStr);
 	static HWND MDIClientWnd();
 	CWnd* FindCurrEditorWnd();
+	CWnd* FindCurrEditorClient();
+	CWnd* FindCurrVimWnd();
 	void Caret(HWND hWnd, int caret);
 
 	static WNDPROC m_prevMDIClientWndProc;

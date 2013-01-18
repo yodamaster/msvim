@@ -28,6 +28,9 @@ extern CComModule _Module;
 #include <ObjModel\dbgdefs.h>
 #include <ObjModel\dbgauto.h>
 
+// frequently used datastructure
+#include <map>
+
 /////////////////////////////////////////////////////////////////////////////
 // Debugging support
 
