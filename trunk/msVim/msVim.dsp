@@ -65,9 +65,10 @@ LINK32=link.exe
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "Debug"
 # PROP Intermediate_Dir "Debug"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ  /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /D "_MBCS" /D "_USRDLL" /Yu"stdafx.h" /FD /GZ    /c
+# ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /D "_MBCS" /D "_USRDLL" /FR /Yu"stdafx.h" /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
@@ -160,6 +161,34 @@ SOURCE=.\res\TBarLrge.bmp
 # Begin Source File
 
 SOURCE=.\res\TBarMedm.bmp
+# End Source File
+# End Group
+# Begin Group "Vim"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\Vim\vim.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\Vim\vim_control_handler.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Vim\vim_icontrolhandler.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Vim\vim_icontrolhandler.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\Vim\vim_iicontrolhandler.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\Vim\vim_library_cfg.cpp
 # End Source File
 # End Group
 # Begin Source File
