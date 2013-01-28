@@ -15,12 +15,36 @@ const int MAX_CLASSNAME_LENGTH = 30;
 
 int nSwitchTextWndProc = 2;
 static LPTSTR g_child_classname = NULL;
-// map<child_wnd, vim_wnd>
+// map<vim_wnd, child_wnd>
 typedef std::map<HWND, HWND> MDI_CHILDS;
 MDI_CHILDS g_childs;
 MDI_CHILDS::iterator g_child_iter = NULL;
 
+HHOOK g_hChildHook = 0;
+
 WNDPROC prevTextWndProc = 0;
+
+LRESULT CALLBACK CallKeyProc(
+  int nCode,      // hook code
+  WPARAM wParam,  // current-process flag
+  LPARAM lParam   // message data
+) {
+	if (nCode == HC_ACTION) {
+		int nVK = wParam;
+		int nInfo = lParam;
+
+		HWND hFocus = ::GetFocus();
+		g_child_iter = g_childs.find( hFocus );
+		if (g_child_iter == g_childs.end())
+			return ::CallNextHookEx(g_hChildHook, nCode, wParam, lParam);
+
+		// handle WM_CHAR message
+		//return 0;
+		return ::CallNextHookEx(g_hChildHook, nCode, wParam, lParam);
+	} else if (nCode < 0) {
+		return ::CallNextHookEx(g_hChildHook, nCode, wParam, lParam);
+	}
+}
 
 LRESULT MDITextWndHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -45,7 +69,15 @@ LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		nSwitchTextWndProc = 0;
 
 		HWND hVimWnd = g_childs.begin()->first;
-		prevTextWndProc = (WNDPROC)::SetClassLong(hVimWnd, GCL_WNDPROC, (LONG)MDITextWndHook);
+		//prevTextWndProc = (WNDPROC)::SetClassLong(hVimWnd, GCL_WNDPROC, (LONG)MDITextWndHook);
+
+		DWORD dwChildThreadId = ::GetWindowThreadProcessId(hVimWnd, NULL);
+		g_hChildHook = ::SetWindowsHookEx(WH_KEYBOARD, CallKeyProc, NULL, dwChildThreadId);
+		if (g_hChildHook == NULL)
+		{
+			OutputDebugString(_T("Hook MDI Child KeyProc failed!"));
+			return lres;
+		}
 		
 		g_child_iter = g_childs.begin();
 		for (; g_child_iter != g_childs.end(); g_child_iter++)
@@ -69,7 +101,7 @@ LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					{
 						hVimWnd = ::FindWindowEx(hVimWnd, NULL, _T("Afx:400000:8"), NULL);
 					}
-					g_childs [ hChild ] = hVimWnd;
+					g_childs [ hVimWnd ] = hChild;
 					hChild = ::FindWindowEx(hMDIClient, hChild, NULL, NULL);
 				}
 				
