@@ -2,14 +2,53 @@
 
 = Introduction =
 
-Add your content here.
+The following table shows the parent of each object:
+
+|| *Object* || *Parent object* ||
+|| Application || Application ||
+|| Breakpoint || Breakpoints ||
+|| Breakpoints || Application ||
+|| Configuration || Project ||
+|| Configurations || Project ||
+|| Debugger || Application ||
+|| Document || Application || 
+|| Documents || Application ||  
+|| Project || Application || 
+|| Projects || Application ||  
+|| TextDocument || Application ||  
+|| TextEditor || Application ||  
+|| TextSelection || TextDocument ||  
+|| TextWindow || TextDocument ||  
+|| Window || Document (for "Generic" window types) <br/>TextDocument (for "Text" window types) || 
+|| Windows || Application ||
+
+Application
+    Application (Application is its own parent)
+        Projects
+            Project
+                Configurations
+                    Configuration
+                        Configurations (circular)
+        Documents
+            Document
+                Window (for "Generic" window types)
+            TextDocument
+                TextSelection
+                TextWindow
+                Window (for "Text" window types)
+        TextEditor
+        Windows
+        Debugger
+        Breakpoints
+            Breakpoint
+
 
 
 = Details =
 
-The *TextEditor* object has the following properties. These properties affect all text documents open in the editor. For details about text documents, see the TextDocument object.<br>
--- 这表明TextEditor对象实际上是一个抽象概念，由属性集构成。这个对象的属性影响所有打开的文档。
+TextEditor是Application对象的一个属性。用来代表Develop Studio text editor。这玩意就是设置菜单项里面的那个Text Editor，可以设置Studio所用的字体、颜色、背景色之类的东西。很明显，一个Applicationd对象只有一个TextEditor对象。
+
+Develop Studio里有很多窗口，比如Output窗口、Debug窗口、Workspace窗口、Watch窗口、代码或文本窗口等等，所有的窗口的集合称为Windows对象，可以通过Application对象的Windows属性来获得。代表所有文档窗口集合的Windows对象，可以通过Document的Windows属性获得。我说的是文档，不是文本。图像资源也是文档。文本资源在Studio里由特别的对象来建模，叫TextDocument，相应的，文本窗口就是TextWindow。
 
 
-The *TextWindow* object represents a view of a TextDocument object — that is, a view of a file that is open). A TextDocument object can have several TextWindow objects.<br>
--- 这表明TextWindow对象才是一个真正的物理窗口。这个窗口根据TextEditor的属性来绘制内容。
+----
