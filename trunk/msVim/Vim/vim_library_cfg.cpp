@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "vim.h"
 
-VIM_MODE g_vim_mode = vm_command;
+VIM_MODE g_init_inputmode = vm_command;
 KEY_MAPPING_TABLE g_key_mapping_table[vm_mode_num];
 
 HRESULT LoadVimCfg()

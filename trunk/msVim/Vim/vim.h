@@ -31,7 +31,7 @@ typedef struct {
 	KEY_MAPPING mapping;
 } KEY_MAPPING_TABLE;
 
-extern VIM_MODE g_vim_mode;
+extern VIM_MODE g_init_inputmode;
 extern KEY_MAPPING_TABLE g_key_mapping_table[vm_mode_num];
 
 // vim_library_cfg
@@ -41,5 +41,8 @@ LPCTSTR QueryAction(VIM_MODE mode, LPCTSTR key);
 // four control handler
 // framework decide to invoke which handler's BeginActive/Active/EndActive function via
 // testing GetToolNum and GetTool functions.
+
+// the user input character-stream interpreter
+int VimInterpreter();
 
 #endif // VIM_H

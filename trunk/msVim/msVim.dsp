@@ -188,6 +188,10 @@ SOURCE=.\Vim\vim_iicontrolhandler.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\Vim\vim_interpreper.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\Vim\vim_library_cfg.cpp
 # End Source File
 # End Group
