@@ -13,7 +13,10 @@ class CCommands :
 {
 protected:
 	IApplication* m_pApplication;
+
+public:
 	static HWND m_hMDIClientWnd;
+	static WNDPROC m_prevMDIClientWndProc;
 
 public:
 	CCommands();
@@ -24,12 +27,12 @@ public:
 
 	void DebugStr(LPCSTR lpStr);
 	static HWND MDIClientWnd();
-	CWnd* FindCurrEditorWnd();
-	CWnd* FindCurrEditorClient();
-	CWnd* FindCurrVimWnd();
+	static HWND FindVimWnd(HWND hMDIChild);
+	static HWND FindActiveVimWnd();
+	static HWND FindActiveMDIChildWnd();
 	void Caret(HWND hWnd, int caret);
+	static HRESULT SubclassingMDIClient();
 
-	static WNDPROC m_prevMDIClientWndProc;
 
 	BEGIN_COM_MAP(CCommands)
 		COM_INTERFACE_ENTRY(IDispatch)

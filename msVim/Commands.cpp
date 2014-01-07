@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "msVim.h"
 #include "Commands.h"
+#include "vim/vim.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -11,116 +12,140 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-const int MAX_CLASSNAME_LENGTH = 30;
-
-int nSwitchTextWndProc = 2;
-static LPTSTR g_child_classname = NULL;
-// map<vim_wnd, child_wnd>
-typedef std::map<HWND, HWND> MDI_CHILDS;
+typedef struct {
+	HWND mdiChild;
+	ITextWindow *pDoc;
+	VIM_MODE input_mode;
+	WNDPROC prev_wndproc;
+}VIMProp, *PVIMProp;
+// map<vim_wnd, VIMProp>
+typedef std::map<HWND, VIMProp> MDI_CHILDS;
 MDI_CHILDS g_childs;
-MDI_CHILDS::iterator g_child_iter = NULL;
 
-HHOOK g_hChildHook = 0;
+#define WM_ESC WM_USER+100
+#define WM_ENTER WM_ESC+1
+HWND g_focus_wnd = NULL;
+HHOOK g_keybd_hook = NULL;
 
-WNDPROC prevTextWndProc = 0;
+BOOL g_vim_good = TRUE;
 
-LRESULT CALLBACK CallKeyProc(
-  int nCode,      // hook code
-  WPARAM wParam,  // current-process flag
-  LPARAM lParam   // message data
-) {
-	if (nCode == HC_ACTION) {
-		int nVK = wParam;
-		int nInfo = lParam;
-
-		HWND hFocus = ::GetFocus();
-		g_child_iter = g_childs.find( hFocus );
-		if (g_child_iter == g_childs.end())
-			return ::CallNextHookEx(g_hChildHook, nCode, wParam, lParam);
-
-		// handle WM_CHAR message
-		//return 0;
-		return ::CallNextHookEx(g_hChildHook, nCode, wParam, lParam);
-	} else if (nCode < 0) {
-		return ::CallNextHookEx(g_hChildHook, nCode, wParam, lParam);
-	}
-}
-
-LRESULT MDITextWndHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	MDI_CHILDS::iterator iter = g_childs.find( hWnd );
+	if (iter == g_childs.end()) {
+		return -1;
+	}
+
 	switch (msg)
 	{
 	case WM_CHAR:
 		{
+			VimInterpreter();
+			return 0;
+		}
+		break;
+
+	case WM_KILLFOCUS:
+		{
+			g_focus_wnd = NULL;
+		}
+		break;
+
+	case WM_SETFOCUS:
+		{
+			g_focus_wnd = hWnd;	// iter->first;
+		}
+		break;
+
+	case WM_ESC:
+		{
+			return 0;
+		}
+
+	case WM_ENTER:
+		{
+			return 1;
+		}
+
+	default:
+		break;
+	}
+
+	return ::CallWindowProc(iter->second.prev_wndproc, hWnd, msg, wParam, lParam);
+}
+
+LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{	
+	LRESULT lres = ::CallWindowProc(CCommands::m_prevMDIClientWndProc, hWnd, msg, wParam, lParam);
+
+	switch (msg) {
+	case WM_MDICREATE:
+		{
+			//HWND hVimWnd = CCommands::FindVimWnd((HWND)lres);
+
+		}
+		break;
+	case WM_MDIGETACTIVE:
+		{
+		}
+		break;
+	case WM_MDIDESTROY:
+		{
+			MDI_CHILDS::iterator iter = g_childs.begin();
+			for (; iter != g_childs.end(); iter++) {
+				if (iter->second.mdiChild == (HWND)wParam) {
+					g_childs.erase(iter);
+					break;
+				}
+			}
 		}
 		break;
 	}
 
-	return ::CallWindowProc(prevTextWndProc, hWnd, msg, wParam, lParam);
+	return lres;
 }
 
-LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	static HWND hMDIClient = CCommands::MDIClientWnd();
-	LRESULT lres = ::CallWindowProc(CCommands::m_prevMDIClientWndProc, hWnd, msg, wParam, lParam);
-
-	if (nSwitchTextWndProc == 1)
-	{
-		nSwitchTextWndProc = 0;
-
-		HWND hVimWnd = g_childs.begin()->first;
-		//prevTextWndProc = (WNDPROC)::SetClassLong(hVimWnd, GCL_WNDPROC, (LONG)MDITextWndHook);
-
-		DWORD dwChildThreadId = ::GetWindowThreadProcessId(hVimWnd, NULL);
-		g_hChildHook = ::SetWindowsHookEx(WH_KEYBOARD, CallKeyProc, NULL, dwChildThreadId);
-		if (g_hChildHook == NULL)
-		{
-			OutputDebugString(_T("Hook MDI Child KeyProc failed!"));
-			return lres;
-		}
-		
-		g_child_iter = g_childs.begin();
-		for (; g_child_iter != g_childs.end(); g_child_iter++)
-		{
-			//::SetWindowLong(g_child_iter->second, GWL_WNDPROC, (LONG)MDITextWndHook);
-		}
+LRESULT CALLBACK KeyboardProc(
+							  int code,
+							  WPARAM wParam,
+							  LPARAM lParam
+							  ) {
+	if (code < 0) {
+		return ::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
 	}
-
-	if (hWnd == hMDIClient)
-	{
-		switch (msg)
-		{
-		case WM_MDICREATE:
+	
+	if (g_focus_wnd != NULL) {
+		switch (wParam) {
+		case VK_ESCAPE:
 			{
-				HWND hVimWnd = NULL;
-				HWND hChild = ::FindWindowEx(hMDIClient, NULL, NULL, NULL);
-				while (hChild)
-				{
-					hVimWnd = ::FindWindowEx(hChild, NULL, _T("AfxMDIFrame42"), NULL);
-					if (hVimWnd)
-					{
-						hVimWnd = ::FindWindowEx(hVimWnd, NULL, _T("Afx:400000:8"), NULL);
-					}
-					g_childs [ hVimWnd ] = hChild;
-					hChild = ::FindWindowEx(hMDIClient, hChild, NULL, NULL);
-				}
-				
-				if (nSwitchTextWndProc == 2)
-				{
-					if (!g_childs.empty())
-					{
-						nSwitchTextWndProc = 1;
+				BYTE hi=HIBYTE(HIWORD(lParam)), L7=hi<<7, L2=hi<<2,R7=hi>>7, L2R7=L2>>7, L1=hi<<1, L1R7=L1>>7;
+				if (R7 == 0 &&
+					L2R7 == 0 &&
+					L7 == 0) {
+					if (L1R7 != 1) {
+						::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
+						return ::SendMessage(g_focus_wnd, WM_ESC, 0, 0);
 					}
 				}
 			}
 			break;
-
-		case WM_MDIDESTROY:
+		case VK_RETURN:
+			{
+				BYTE hi=HIBYTE(HIWORD(lParam)), L7=hi<<7, L2=hi<<2,R7=hi>>7, L2R7=L2>>7;
+				if (R7 == 0 &&
+					L2R7 == 0 &&
+					L7 == 0) {
+					::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
+					return ::SendMessage(g_focus_wnd, WM_ENTER, 0, 0);
+				}
+			}
+			break;
+		default:
 			break;
 		}
 	}
 
-	return lres;
+	return ::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -139,6 +164,10 @@ CCommands::~CCommands()
 {
 	ASSERT (m_pApplication != NULL);
 	m_pApplication->Release();
+	if (g_keybd_hook != NULL) {
+		::UnhookWindowsHookEx(g_keybd_hook);
+		g_keybd_hook = NULL;
+	}
 }
 
 void CCommands::SetApplicationObject(IApplication* pApplication)
@@ -212,7 +241,12 @@ HRESULT CCommands::XApplicationEvents::BuildFinish(long nNumErrors, long nNumWar
 HRESULT CCommands::XApplicationEvents::BeforeApplicationShutDown()
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-	return S_OK;
+	// 在这儿还原对MDIClient的Subclassing
+	HRESULT hr = S_OK;
+	/*if (m_prevMDIClientWndProc != NULL) {
+		(WNDPROC)::SetWindowLong(hMDIClient, GWL_WNDPROC, (LONG)m_prevMDIClientWndProc);
+	}*/
+	return hr;
 }
 
 HRESULT CCommands::XApplicationEvents::DocumentOpen(IDispatch* theDocument)
@@ -242,6 +276,39 @@ HRESULT CCommands::XApplicationEvents::NewDocument(IDispatch* theDocument)
 HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	if (m_prevMDIClientWndProc == NULL) {
+		if (FAILED(CCommands::SubclassingMDIClient())) {
+			return E_FAIL;
+		}
+	}
+
+	CComPtr<ITextWindow> textWnd;
+	if (FAILED(theWindow->QueryInterface(IID_ITextWindow, (void**)&textWnd)) || textWnd == NULL) {
+		return S_OK;
+	}
+	if (g_vim_good) {
+		HWND hMDIChildWnd = CCommands::FindActiveMDIChildWnd();
+		HWND hWnd = CCommands::FindVimWnd(hMDIChildWnd);
+		g_focus_wnd = hWnd;
+		if (g_keybd_hook == NULL) {
+			g_keybd_hook = ::SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, NULL, ::GetWindowThreadProcessId(hWnd, NULL));
+			if (g_keybd_hook == NULL) {
+				g_vim_good = FALSE;
+				return S_OK;
+			}
+		}
+		MDI_CHILDS::iterator iter = g_childs.find( hWnd );
+		if (iter == g_childs.end()) {
+			VIMProp prop;
+			prop.mdiChild = hMDIChildWnd;
+			prop.pDoc = textWnd;
+			prop.input_mode = vm_command;
+			prop.prev_wndproc = (WNDPROC)::SetWindowLong(hWnd, GWL_WNDPROC, (LONG)MDITextWnd);
+			g_childs[ hWnd ] = prop;
+		}
+	}
+
 	return S_OK;
 }
 
@@ -304,11 +371,9 @@ STDMETHODIMP CCommands::MsVimCommandMethod()
 	if (FAILED(editor_sel->get_CurrentColumn(&pos.y)))
 		return E_FAIL;
 
-	CWnd* pCurrWnd = /*FindCurrEditorWnd()*/FindCurrVimWnd();
-	if (pCurrWnd == NULL)
-		return S_FALSE;
 
-	Caret(pCurrWnd->m_hWnd, 0);
+	HWND test = ::GetFocus();
+	Caret(test, 0);
 
 	VERIFY_OK(m_pApplication->EnableModeless(VARIANT_FALSE));
 	//::MessageBox(NULL, csPos, "MsVim", MB_OK | MB_ICONINFORMATION);
@@ -326,82 +391,29 @@ void CCommands::DebugStr( LPCSTR lpStr )
 	}
 }
 
-CWnd* CCommands::FindCurrEditorWnd()
+// 找到指定MDIChild窗口中的编辑窗口
+HWND CCommands::FindVimWnd(HWND hMDIChild)
 {
-	CComPtr<ITextWindow> editor_window;
-	if (FAILED(m_pApplication->get_ActiveWindow((IDispatch**)&editor_window)) || editor_window == NULL)
-		return NULL;
-	
-	CComBSTR bstrCaption;
-	if (FAILED(editor_window->get_Caption(&bstrCaption)))
-		return NULL;
-	CString csCurrCaption(bstrCaption.m_str);
-
-	CWnd* pMainFrm = AfxGetMainWnd();
-	if (pMainFrm == NULL)
-		return NULL;
-	
-	HWND hMDIClient = MDIClientWnd();
-	if (hMDIClient == NULL)
-		return NULL;
-	
-	CString csTitle;
-
-	BOOL bFindCurr = FALSE;
-	HWND hChild = ::FindWindowEx(hMDIClient, NULL, NULL, NULL);
-	while (hChild)
-	{
-		csTitle.Empty();
-		
-		int nLen = ::GetWindowTextLength(hChild);
-		::GetWindowText(hChild, csTitle.GetBufferSetLength(nLen), nLen+1);
-		csTitle.ReleaseBuffer();
-		
-		if (csTitle == csCurrCaption) {
-			bFindCurr = TRUE;
-			break;
-		}
-		hChild = ::FindWindowEx(hMDIClient, hChild, NULL, NULL);
+	HWND hChild = ::FindWindowEx(hMDIChild, NULL, "AfxMDIFrame42", NULL);
+	if (hChild != NULL) {
+		return ::FindWindowEx(hChild, NULL, "Afx:400000:8", NULL);
 	}
-	
-	if (!bFindCurr)
-		return NULL;
-
-	return pMainFrm->FromHandle(hChild);
-}
-
-CWnd* CCommands::FindCurrEditorClient()
-{
-	CWnd* pCurr = FindCurrEditorWnd();
-	if (pCurr == NULL)
-		return NULL;
-	
-	HWND hChild = ::FindWindowEx(pCurr->m_hWnd, NULL, "AfxMDIFrame42", NULL);
-	if (hChild != NULL)
-		return pCurr->FromHandle(hChild);
-
 	return NULL;
 }
 
-CWnd* CCommands::FindCurrVimWnd()
-{
-	CWnd* pCurr = FindCurrEditorClient();
-	if (pCurr == NULL)
-		return NULL;
+// 找到当前活动MDIChild窗口中的编辑窗口
+HWND CCommands::FindActiveVimWnd() {
+	HWND hMDIChild = (HWND)::SendMessage(MDIClientWnd(), WM_MDIGETACTIVE, 0, 0);
+	return FindVimWnd(hMDIChild);
+}
 
-	HWND hChild = ::FindWindowEx(pCurr->m_hWnd, NULL, "Afx:400000:8", NULL);
-	if (hChild != NULL)
-		return pCurr->FromHandle(hChild);
-
-	return NULL;
+// 找到当前活动MDIChild窗口
+HWND CCommands::FindActiveMDIChildWnd() {
+	return (HWND)::SendMessage(MDIClientWnd(), WM_MDIGETACTIVE, 0, 0);
 }
 
 void CCommands::Caret( HWND hWnd, int caret )
 {
-	CComPtr<ITextEditor> editor;
-	if (FAILED(m_pApplication->get_TextEditor((IDispatch**)&editor)))
-		return;
-
 	if (caret == 1) {
 		::DestroyCaret();
 		::CreateCaret(hWnd, (HBITMAP)1, 0, 0);
@@ -409,7 +421,7 @@ void CCommands::Caret( HWND hWnd, int caret )
 		return;
 	}
 
-	CWnd* pWnd = /*FindCurrEditorWnd()*/FindCurrVimWnd();
+	CWnd* pWnd = CWnd::FromHandle(hWnd);
 	if (pWnd != NULL)
 	{
 		CDC* pDC = pWnd->GetDC();
@@ -436,6 +448,7 @@ STDMETHODIMP CCommands::HookMDIClient( )
 	return S_OK;
 }
 
+// 获取MDIClient窗口，而不是MDIFrame窗口；这两个窗口均只有一个。
 HWND CCommands::MDIClientWnd()
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
@@ -448,5 +461,23 @@ HWND CCommands::MDIClientWnd()
 		m_hMDIClientWnd = ::FindWindowEx(pMainFrm->m_hWnd, NULL, "MDIClient", NULL);
 		return m_hMDIClientWnd;
 	}
+
 	return m_hMDIClientWnd;
+}
+
+HRESULT CCommands::SubclassingMDIClient() {
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+	
+	HWND hMDIClient = MDIClientWnd();
+	if (hMDIClient == NULL) {
+		return E_FAIL;
+	}
+
+	m_prevMDIClientWndProc = (WNDPROC)::SetWindowLong(hMDIClient, GWL_WNDPROC, (LONG)MDIClientHook);
+	if (m_prevMDIClientWndProc != NULL) {
+		return S_OK;
+	}
+	else {
+		return E_FAIL;
+	}
 }
