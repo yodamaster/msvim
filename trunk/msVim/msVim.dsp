@@ -172,22 +172,6 @@ SOURCE=.\Vim\vim.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\Vim\vim_control_handler.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Vim\vim_icontrolhandler.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Vim\vim_icontrolhandler.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\Vim\vim_iicontrolhandler.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\Vim\vim_interpreper.cpp
 # End Source File
 # Begin Source File

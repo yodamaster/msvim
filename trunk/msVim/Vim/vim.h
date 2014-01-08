@@ -3,12 +3,25 @@
 
 #include <map>
 
+#define WM_ESC WM_USER+100
+#define WM_ENTER WM_ESC+1
+
 typedef enum {
 	vm_insert,
 	vm_command,
 	vm_command_line,
 	vm_mode_num
 } VIM_MODE;
+
+typedef struct {
+	HWND mdiChild;
+	CComPtr<ITextWindow> pDoc;
+	VIM_MODE input_mode;
+	WNDPROC prev_wndproc;
+}VIMProp, *PVIMProp;
+// map<vim_wnd, VIMProp>
+typedef std::map<HWND, VIMProp> MDI_CHILDS;
+
 
 // should use Hash table instead
 /*typedef struct {
@@ -42,7 +55,11 @@ LPCTSTR QueryAction(VIM_MODE mode, LPCTSTR key);
 // framework decide to invoke which handler's BeginActive/Active/EndActive function via
 // testing GetToolNum and GetTool functions.
 
+void Caret( HWND hWnd, int caret );
+
 // the user input character-stream interpreter
-int VimInterpreter();
+int VimInterpreter(HWND, UINT, WPARAM, LPARAM, PVIMProp);
+
+void VimStart();
 
 #endif // VIM_H
