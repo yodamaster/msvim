@@ -12,21 +12,9 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-typedef struct {
-	HWND mdiChild;
-	ITextWindow *pDoc;
-	VIM_MODE input_mode;
-	WNDPROC prev_wndproc;
-}VIMProp, *PVIMProp;
-// map<vim_wnd, VIMProp>
-typedef std::map<HWND, VIMProp> MDI_CHILDS;
 MDI_CHILDS g_childs;
-
-#define WM_ESC WM_USER+100
-#define WM_ENTER WM_ESC+1
 HWND g_focus_wnd = NULL;
 HHOOK g_keybd_hook = NULL;
-
 BOOL g_vim_good = TRUE;
 
 LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -40,13 +28,14 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CHAR:
 		{
-			VimInterpreter();
+			VimInterpreter(hWnd, WM_CHAR, wParam, lParam, &iter->second);
 			return 0;
 		}
 		break;
 
 	case WM_KILLFOCUS:
 		{
+			VimInterpreter(hWnd, WM_KILLFOCUS, wParam, lParam, &iter->second);
 			g_focus_wnd = NULL;
 		}
 		break;
@@ -59,11 +48,13 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_ESC:
 		{
+			VimInterpreter(hWnd, WM_ESC, wParam, lParam, &iter->second);
 			return 0;
 		}
 
 	case WM_ENTER:
 		{
+			VimInterpreter(hWnd, WM_CHAR, VK_RETURN, lParam, &iter->second);
 			return 1;
 		}
 
@@ -82,7 +73,6 @@ LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_MDICREATE:
 		{
 			//HWND hVimWnd = CCommands::FindVimWnd((HWND)lres);
-
 		}
 		break;
 	case WM_MDIGETACTIVE:
@@ -118,23 +108,19 @@ LRESULT CALLBACK KeyboardProc(
 		switch (wParam) {
 		case VK_ESCAPE:
 			{
-				BYTE hi=HIBYTE(HIWORD(lParam)), L7=hi<<7, L2=hi<<2,R7=hi>>7, L2R7=L2>>7, L1=hi<<1, L1R7=L1>>7;
-				if (R7 == 0 &&
-					L2R7 == 0 &&
-					L7 == 0) {
-					if (L1R7 != 1) {
-						::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
-						return ::SendMessage(g_focus_wnd, WM_ESC, 0, 0);
-					}
+				WORD hi=HIWORD(lParam);
+				if ((hi & KF_UP) == 0 && 
+					(hi & KF_REPEAT) == 0) {
+					::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
+					return ::SendMessage(g_focus_wnd, WM_ESC, 0, 0);
 				}
 			}
 			break;
 		case VK_RETURN:
 			{
-				BYTE hi=HIBYTE(HIWORD(lParam)), L7=hi<<7, L2=hi<<2,R7=hi>>7, L2R7=L2>>7;
-				if (R7 == 0 &&
-					L2R7 == 0 &&
-					L7 == 0) {
+				WORD hi=HIWORD(lParam);
+				if ((hi & KF_UP) == 0 &&
+					(hi & KF_ALTDOWN) == 0) {
 					::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
 					return ::SendMessage(g_focus_wnd, WM_ENTER, 0, 0);
 				}
@@ -176,6 +162,9 @@ void CCommands::SetApplicationObject(IApplication* pApplication)
 	//  for us, which CDSAddIn did in its QueryInterface call
 	//  just before it called us.
 	m_pApplication = pApplication;
+
+	// initialization work
+	VimStart();
 
 	// Create Application event handlers
 	XApplicationEventsObj::CreateInstance(&m_pApplicationEventsObj);
@@ -303,7 +292,7 @@ HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 			VIMProp prop;
 			prop.mdiChild = hMDIChildWnd;
 			prop.pDoc = textWnd;
-			prop.input_mode = vm_command;
+			prop.input_mode = g_init_inputmode;
 			prop.prev_wndproc = (WNDPROC)::SetWindowLong(hWnd, GWL_WNDPROC, (LONG)MDITextWnd);
 			g_childs[ hWnd ] = prop;
 		}
@@ -315,6 +304,7 @@ HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 HRESULT CCommands::XApplicationEvents::WindowDeactivate(IDispatch* theWindow)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+	::DestroyCaret();
 	return S_OK;
 }
 
@@ -410,29 +400,6 @@ HWND CCommands::FindActiveVimWnd() {
 // 找到当前活动MDIChild窗口
 HWND CCommands::FindActiveMDIChildWnd() {
 	return (HWND)::SendMessage(MDIClientWnd(), WM_MDIGETACTIVE, 0, 0);
-}
-
-void CCommands::Caret( HWND hWnd, int caret )
-{
-	if (caret == 1) {
-		::DestroyCaret();
-		::CreateCaret(hWnd, (HBITMAP)1, 0, 0);
-		ShowCaret(hWnd);
-		return;
-	}
-
-	CWnd* pWnd = CWnd::FromHandle(hWnd);
-	if (pWnd != NULL)
-	{
-		CDC* pDC = pWnd->GetDC();
-
-		CSize fontSize = pDC->GetTextExtent("1");
-		::DestroyCaret();
-		::CreateCaret(hWnd, (HBITMAP)caret, fontSize.cx, fontSize.cy);
-		ShowCaret(hWnd);
-
-		pWnd->ReleaseDC(pDC);
-	}
 }
 
 STDMETHODIMP CCommands::HookMDIClient( )

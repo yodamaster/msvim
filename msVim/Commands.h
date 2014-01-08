@@ -30,7 +30,6 @@ public:
 	static HWND FindVimWnd(HWND hMDIChild);
 	static HWND FindActiveVimWnd();
 	static HWND FindActiveMDIChildWnd();
-	void Caret(HWND hWnd, int caret);
 	static HRESULT SubclassingMDIClient();
 
 
