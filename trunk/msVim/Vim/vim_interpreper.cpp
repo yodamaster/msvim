@@ -25,15 +25,22 @@ int VimInterpreter(HWND hVim, UINT msg, WPARAM wParam, LPARAM lParam, PVIMProp v
 		}
 		break;
 
-	case WM_KILLFOCUS:
-		{
-		}
-		break;
-
 	case WM_ESC:
 		{
 			if (vimProp->input_mode == vm_insert) {
-				Caret(hVim, 0);
+				vimProp->input_mode = vm_command;
+				ITextSelection* sel = NULL;
+				HRESULT hr = vimProp->pDoc->get_Selection((IDispatch**)&sel);
+				if (SUCCEEDED(hr) && sel != NULL) {
+					CComVariant bExtend(false), nCount(1);
+					hr = sel->CharLeft(bExtend, nCount);
+				}
+				::GetCaretPos(&vimProp->caret_pos);
+				if (vimProp->caret_pos.x != vimProp->caret_start_x) {
+					vimProp->caret_pos.x += 1;
+				}
+				::DestroyCaret();
+				Caret(hVim, vimProp);
 			}
 		}
 		break;
@@ -46,24 +53,22 @@ int VimInterpreter(HWND hVim, UINT msg, WPARAM wParam, LPARAM lParam, PVIMProp v
 }
 
 
-void Caret( HWND hWnd, int caret )
+void Caret( HWND hWnd, PVIMProp vProp )
 {
-	if (caret == 1) {
-		::CreateCaret(hWnd, (HBITMAP)1, 0, 0);
-		ShowCaret(hWnd);
-		return;
-	}
-
-	CWnd* pWnd = CWnd::FromHandle(hWnd);
-	if (pWnd != NULL)
-	{
-		CDC* pDC = pWnd->GetDC();
-
-		CSize fontSize = pDC->GetTextExtent("1");
-		::CreateCaret(hWnd, (HBITMAP)caret, fontSize.cx, fontSize.cy);
-		ShowCaret(hWnd);
-
-		pWnd->ReleaseDC(pDC);
+	TEXTMETRIC txtMetric;
+	HDC hdc = ::GetDC(hWnd);
+	if (::GetTextMetrics(hdc, &txtMetric)) {
+		::DestroyCaret();
+		if (vProp->input_mode == vm_insert) {
+			::CreateCaret(hWnd, (HBITMAP)0, 2, txtMetric.tmHeight);
+		}
+		else { // vm_command, vm_command_line, vm_visual
+			int nWidth;
+			::GetCharWidth32(hdc, 'a', 'a', &nWidth);
+			::CreateCaret(hWnd, (HBITMAP)0, nWidth, txtMetric.tmHeight);
+		}
+		::SetCaretPos(vProp->caret_pos.x, vProp->caret_pos.y);
+		::ShowCaret(hWnd);
 	}
 }
 
@@ -87,6 +92,12 @@ void s_TypeChar(PVIMProp vimProp, OLECHAR ch) {
 		if (SUCCEEDED(hr) && sel != NULL) {
 			s_SetChar(ch);
 			hr = sel->put_Text(s_ch);
+			// record caret position
+			::GetCaretPos(&vimProp->caret_pos);
+			if (vimProp->caret_pos.x != vimProp->caret_start_x) {
+				vimProp->caret_pos.x += 1;
+				::SetCaretPos(vimProp->caret_pos.x, vimProp->caret_pos.y);
+			}
 		}
 	}
 }

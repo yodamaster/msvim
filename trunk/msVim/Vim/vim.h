@@ -10,12 +10,15 @@ typedef enum {
 	vm_insert,
 	vm_command,
 	vm_command_line,
+	vm_visual,
 	vm_mode_num
 } VIM_MODE;
 
 typedef struct {
 	HWND mdiChild;
 	CComPtr<ITextWindow> pDoc;
+	LONG caret_start_x;
+	POINT caret_pos;
 	VIM_MODE input_mode;
 	WNDPROC prev_wndproc;
 }VIMProp, *PVIMProp;
@@ -55,7 +58,7 @@ LPCTSTR QueryAction(VIM_MODE mode, LPCTSTR key);
 // framework decide to invoke which handler's BeginActive/Active/EndActive function via
 // testing GetToolNum and GetTool functions.
 
-void Caret( HWND hWnd, int caret );
+void Caret( HWND hWnd, PVIMProp );
 
 // the user input character-stream interpreter
 int VimInterpreter(HWND, UINT, WPARAM, LPARAM, PVIMProp);

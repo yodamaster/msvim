@@ -35,14 +35,19 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_KILLFOCUS:
 		{
-			VimInterpreter(hWnd, WM_KILLFOCUS, wParam, lParam, &iter->second);
 			g_focus_wnd = NULL;
 		}
 		break;
 
 	case WM_SETFOCUS:
 		{
+			::CallWindowProc(iter->second.prev_wndproc, hWnd, msg, wParam, lParam);
 			g_focus_wnd = hWnd;	// iter->first;
+			/* show caret */
+			if (iter->second.input_mode == vm_command) {
+				Caret(hWnd, &iter->second);
+			}
+			return 0;
 		}
 		break;
 
@@ -56,6 +61,20 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			VimInterpreter(hWnd, WM_CHAR, VK_RETURN, lParam, &iter->second);
 			return 1;
+		}
+
+	case WM_KEYDOWN:
+		{
+			switch (wParam) {
+			case VK_LEFT:
+			case VK_RIGHT:
+			case VK_UP:
+			case VK_DOWN:
+				VimInterpreter(hWnd, WM_CHAR, wParam, lParam, &iter->second);
+				return 0;
+			default:
+				break;
+			}
 		}
 
 	default:
@@ -292,9 +311,16 @@ HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 			VIMProp prop;
 			prop.mdiChild = hMDIChildWnd;
 			prop.pDoc = textWnd;
+			::GetCaretPos(&prop.caret_pos);
+			prop.caret_start_x = prop.caret_pos.x;
 			prop.input_mode = g_init_inputmode;
 			prop.prev_wndproc = (WNDPROC)::SetWindowLong(hWnd, GWL_WNDPROC, (LONG)MDITextWnd);
 			g_childs[ hWnd ] = prop;
+
+			Caret(g_focus_wnd, &prop);
+		}
+		else {
+			Caret(g_focus_wnd, &iter->second);
 		}
 	}
 
@@ -304,7 +330,9 @@ HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 HRESULT CCommands::XApplicationEvents::WindowDeactivate(IDispatch* theWindow)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
 	::DestroyCaret();
+
 	return S_OK;
 }
 
