@@ -5,6 +5,9 @@
 
 #define WM_ESC WM_USER+100
 #define WM_ENTER WM_ESC+1
+/* Params for WM_ARROWKEY are as the same as WM_KEYDOWN */
+#define WM_ARROWKEY WM_ENTER+1
+
 
 typedef enum {
 	vm_insert,
