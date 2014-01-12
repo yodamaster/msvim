@@ -63,18 +63,13 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return 1;
 		}
 
-	case WM_KEYDOWN:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_ARROWKEY:
 		{
-			switch (wParam) {
-			case VK_LEFT:
-			case VK_RIGHT:
-			case VK_UP:
-			case VK_DOWN:
-				VimInterpreter(hWnd, WM_CHAR, wParam, lParam, &iter->second);
-				return 0;
-			default:
-				break;
-			}
+			LRESULT lr = ::CallWindowProc(iter->second.prev_wndproc, hWnd, msg, wParam, lParam);
+			VimInterpreter(hWnd, WM_ARROWKEY, wParam, lParam, &iter->second);
+			return lr;
 		}
 
 	default:
@@ -89,15 +84,6 @@ LRESULT MDIClientHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	LRESULT lres = ::CallWindowProc(CCommands::m_prevMDIClientWndProc, hWnd, msg, wParam, lParam);
 
 	switch (msg) {
-	case WM_MDICREATE:
-		{
-			//HWND hVimWnd = CCommands::FindVimWnd((HWND)lres);
-		}
-		break;
-	case WM_MDIGETACTIVE:
-		{
-		}
-		break;
 	case WM_MDIDESTROY:
 		{
 			MDI_CHILDS::iterator iter = g_childs.begin();
@@ -135,6 +121,7 @@ LRESULT CALLBACK KeyboardProc(
 				}
 			}
 			break;
+
 		case VK_RETURN:
 			{
 				WORD hi=HIWORD(lParam);
@@ -145,6 +132,17 @@ LRESULT CALLBACK KeyboardProc(
 				}
 			}
 			break;
+
+		case VK_LEFT:
+		case VK_RIGHT:
+		case VK_UP:
+		case VK_DOWN:
+			{
+				::CallNextHookEx(g_keybd_hook, code, wParam, lParam);
+				return ::SendMessage(g_focus_wnd, WM_ARROWKEY, wParam, lParam);
+			}
+			break;
+
 		default:
 			break;
 		}
@@ -330,9 +328,6 @@ HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 HRESULT CCommands::XApplicationEvents::WindowDeactivate(IDispatch* theWindow)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	::DestroyCaret();
-
 	return S_OK;
 }
 

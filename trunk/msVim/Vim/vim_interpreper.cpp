@@ -45,6 +45,16 @@ int VimInterpreter(HWND hVim, UINT msg, WPARAM wParam, LPARAM lParam, PVIMProp v
 		}
 		break;
 
+	case WM_ARROWKEY:
+		{
+			::GetCaretPos(&vimProp->caret_pos);
+			if (vimProp->caret_pos.x != vimProp->caret_start_x) {
+				vimProp->caret_pos.x += 1;
+			}
+			::SetCaretPos(vimProp->caret_pos.x, vimProp->caret_pos.y);
+		}
+		break;
+
 	default:
 		break;
 	}
