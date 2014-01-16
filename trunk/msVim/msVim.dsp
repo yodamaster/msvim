@@ -172,7 +172,7 @@ SOURCE=.\Vim\vim.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\Vim\vim_interpreper.cpp
+SOURCE=.\Vim\vim_interpreter.cpp
 # End Source File
 # Begin Source File
 
