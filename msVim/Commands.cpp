@@ -28,8 +28,14 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CHAR:
 		{
-			VimInterpreter(hWnd, WM_CHAR, wParam, lParam, &iter->second);
+			VimInterpreter(hWnd, msg, wParam, lParam, &iter->second);
 			return 0;
+		}
+		break;
+
+	case WM_IME_CHAR:
+		{
+			VimInterpreter(hWnd, msg, wParam, lParam, &iter->second);
 		}
 		break;
 
@@ -44,9 +50,7 @@ LRESULT MDITextWnd(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			::CallWindowProc(iter->second.prev_wndproc, hWnd, msg, wParam, lParam);
 			g_focus_wnd = hWnd;	// iter->first;
 			/* show caret */
-			if (iter->second.input_mode == vm_command) {
-				Caret(hWnd, &iter->second);
-			}
+			Caret(hWnd, &iter->second);
 			return 0;
 		}
 		break;
@@ -309,6 +313,14 @@ HRESULT CCommands::XApplicationEvents::WindowActivate(IDispatch* theWindow)
 			VIMProp prop;
 			prop.mdiChild = hMDIChildWnd;
 			prop.pDoc = textWnd;
+			{
+				ITextSelection* sel = NULL;
+				HRESULT hr = textWnd->get_Selection((IDispatch**)&sel);
+				if (SUCCEEDED(hr) && sel != NULL) {
+					CComVariant bExtend(false);
+					hr = sel->StartOfDocument(bExtend);
+				}
+			}
 			::GetCaretPos(&prop.caret_pos);
 			prop.caret_start_x = prop.caret_pos.x;
 			prop.input_mode = g_init_inputmode;
