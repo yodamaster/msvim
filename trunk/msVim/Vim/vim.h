@@ -9,7 +9,7 @@
 #define WM_ARROWKEY WM_ENTER+1
 
 
-typedef enum {
+typedef enum _VIM_MODE_ {
 	vm_insert,
 	vm_command,
 	vm_command_line,
@@ -17,14 +17,14 @@ typedef enum {
 	vm_mode_num
 } VIM_MODE;
 
-typedef struct {
+typedef struct _VIMProp_ {
 	HWND mdiChild;
 	CComPtr<ITextWindow> pDoc;
 	LONG caret_start_x;
 	POINT caret_pos;
 	VIM_MODE input_mode;
 	WNDPROC prev_wndproc;
-}VIMProp, *PVIMProp;
+} VIMProp, *PVIMProp;
 // map<vim_wnd, VIMProp>
 typedef std::map<HWND, VIMProp> MDI_CHILDS;
 
