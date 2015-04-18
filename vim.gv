@@ -1,0 +1,80 @@
+digraph VIM {
+rankdir=TB;
+//size="10,10"
+
+// global edge template
+edge [fontcolor=blue, color=purple];
+
+// define start and terminator nodes
+node [shape=doublecircle, style="filled"];
+init;
+stop;
+
+// define common nodes
+node [shape=ellipse];
+subgraph cluster_recording_times {
+label="recording_times";
+bgcolor="mintcream";
+rankdir=LR;
+
+locate_prefix;
+delete_prefix;
+selete_prefix;
+}
+wait_finding_in_line;
+exec_finding_in_line;
+exec_finding_under_cursor;
+goto_line;
+next_word;
+prev_word;
+next_char;
+prev_char;
+wait_gSeries_cmd;
+wait_dSeries_cmd;
+change_case;
+wait_changing_case;
+
+// draw edges
+init->recording_times [label="0..9"];
+init->wait_finding_in_line [label="f,F"];
+init->exec_finding_under_cursor [label="*,#"];
+init->goto_line [label="G"];
+init->next_word [label="w"];
+init->prev_word [label="b"];
+init->next_char [label="l"];
+init->prev_char [label="h"];
+init->wait_gSeries_cmd [label="g"];
+init->wait_dSeries_cmd [label="d"];
+init->change_case [label="~"];
+
+recording_times->recording_times [label="0..9"]
+recording_times->wait_finding_in_line [label="f,F"];
+recording_times->exec_finding_under_cursor [label="*,#"];
+recording_times->goto_line [label="G,+,-,j,k,Enter"];
+recording_times->next_word [label="w"];
+recording_times->prev_word [label="b"];
+recording_times->next_char [label="l"];
+recording_times->prev_char [label="h"];
+recording_times->change_case [label="~"];
+
+wait_finding_in_line->exec_finding_in_line [label="Any visible chars." fontsize=12];
+
+wait_gSeries_cmd->goto_line [label="g"];
+wait_gSeries_cmd->wait_changing_case [label="~,u,U"];
+wait_changing_case->recording_times [label="0..9"];
+wait_changing_case->change_case [label="All locating chars." fontsize=12];
+
+wait_dSeries_cmd->delete_lines [label="d"];
+wait_dSeries_cmd->recording_times [label="0..9"];
+
+// draw stop edges
+edge [style="dashed"];
+exec_finding_under_cursor->stop [label="DoSomething"  fontsize=12];
+goto_line->stop;
+exec_finding_in_line->stop [label="DoSomething"  fontsize=12];
+next_word->stop;
+prev_word->stop;
+next_char->stop;
+prev_char->stop;
+
+}
